@@ -11,6 +11,7 @@ use std::io::prelude::*;
 
 use clap::Arg;
 use conv::*;
+use ansi_term::ANSIStrings;
 
 const DESC: &'static str =
 r"Concatenate FILE(s), or standard input, to standard output with rainbows.
@@ -103,9 +104,13 @@ fn cat<B: BufRead>(feed: &mut B, freq: f32, spread: f32, seed: usize) {
 }
 
 fn cat_line(stdout: &mut StdoutLock, s: &str, freq: f32, spread: f32, seed: usize) {
-    for (i, ch) in s.chars().enumerate() {
-        let rgb = rainbow(freq, f32::value_from(seed).unwrap() + f32::value_from(i).unwrap() / spread);
-        write!(stdout, "{}", ansi_term::Colour::RGB(rgb.0, rgb.1, rgb.2).paint(ch.to_string()));
-    }
-    writeln!(stdout);
+    let strings = s.chars().enumerate()
+        .map(|(i, ch)| {
+            let i = f32::value_from(seed).unwrap() + f32::value_from(i).unwrap() / spread;
+            let rgb = rainbow(freq, i);
+            ansi_term::Colour::RGB(rgb.0, rgb.1, rgb.2).paint(ch.to_string())
+        })
+        .collect::<Vec<_>>();
+    stdout.write_all(ANSIStrings(&strings).to_string().as_bytes()).unwrap();
+    writeln!(stdout).unwrap();
 }
