@@ -1,0 +1,11 @@
+[package]
+authors = ["James Zhu <jameszhu@berkeley.edu>"]
+description = "A faster lolcat, rainbows for your terminal."
+name = "roflcat"
+version = "0.1.0"
+
+[dependencies]
+ansi_term = "0.10.2"
+clap = "2.26"
+conv = "0.3.3"
+rand = "0.3.17"
