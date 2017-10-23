@@ -6,6 +6,7 @@ extern crate rand;
 use std::f32::consts::FRAC_PI_3;
 use std::fs::File;
 use std::io::BufReader;
+use std::io::StdoutLock;
 use std::io::prelude::*;
 
 use clap::Arg;
@@ -94,17 +95,17 @@ fn rainbow(freq: f32, i: f32) -> (u8, u8, u8) {
 }
 
 fn cat<B: BufRead>(feed: &mut B, freq: f32, spread: f32, seed: usize) {
+    let stdout = std::io::stdout();
+    let mut handle = stdout.lock();
     for (i, line) in feed.lines().enumerate() {
-        cat_line(&line.unwrap(), freq, spread, seed + i);
+        cat_line(&mut handle, &line.unwrap(), freq, spread, seed + i);
     }
 }
 
-fn cat_line(s: &str, freq: f32, spread: f32, seed: usize) {
-    let stdout = std::io::stdout();
-    let mut handle = stdout.lock();
+fn cat_line(stdout: &mut StdoutLock, s: &str, freq: f32, spread: f32, seed: usize) {
     for (i, ch) in s.chars().enumerate() {
         let rgb = rainbow(freq, f32::value_from(seed).unwrap() + f32::value_from(i).unwrap() / spread);
-        write!(handle, "{}", ansi_term::Colour::RGB(rgb.0, rgb.1, rgb.2).paint(ch.to_string()));
+        write!(stdout, "{}", ansi_term::Colour::RGB(rgb.0, rgb.1, rgb.2).paint(ch.to_string()));
     }
-    writeln!(handle);
+    writeln!(stdout);
 }
