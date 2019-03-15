@@ -1,8 +1,3 @@
-extern crate ansi_term;
-extern crate clap;
-extern crate conv;
-extern crate rand;
-
 use std::f32::consts::FRAC_PI_3;
 use std::fs::File;
 use std::io::BufReader;
@@ -45,7 +40,7 @@ fn main() {
                 .default_value("20.0"),
             Arg::from_usage("[seed] -S, --seed=<i>")
                 .help("Rainbow seed (0 = random)")
-                .default_value("1"),
+                .default_value("0"),
             Arg::from_usage("-a, --animate   'Enable psychedelics'"),
             Arg::from_usage("-i, --invert    'Invert fg and bg'"),
             Arg::from_usage("-t, --truecolor '24-bit (truecolor)'"),
@@ -58,7 +53,12 @@ fn main() {
     let freq = options.value_of("freq").unwrap().parse().unwrap();
     // let duration = options.value_of("duration").unwrap().parse().unwrap();
     // let speed = options.value_of("speed").unwrap().parse().unwrap();
-    let seed = options.value_of("seed").unwrap().parse().unwrap();
+    let mut seed = options.value_of("seed").unwrap().parse().unwrap();
+
+    if seed == 0 {
+        seed = rand::random::<usize>() % 32;
+    }
+    let seed = seed;
     
     let stdin = std::io::stdin();
     let mut handle = stdin.lock();
