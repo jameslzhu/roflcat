@@ -1,7 +1,8 @@
 use std::f32::consts::FRAC_PI_3;
 use std::fs::File;
-use std::io::BufReader;
-use std::io::StdoutLock;
+use std::io;
+// use std::io::BufReader;
+// use std::io::StdoutLock;
 use std::io::prelude::*;
 
 use clap::Arg;
@@ -12,13 +13,13 @@ const DESC: &'static str =
 r"Concatenate FILE(s), or standard input, to standard output with rainbows.
 With no FILE, or when FILE is -, read standard input.";
 
-const EXAMPLES: &'static str = 
+const EXAMPLES: &'static str =
 r"EXAMPLES:
     roflcat f - g      Output f's contents, then stdin, then g's contents.
     roflcat            Copy standard input to standard output.
     fortune | roflcat  Display a rainbow cookie.";
 
-fn main() {
+fn main() -> io::Result<()> {
     let options = clap::App::new(env!("CARGO_PKG_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
         // .author(env!("CARGO_PKG_AUTHORS"))
@@ -48,7 +49,7 @@ fn main() {
         ])
         .after_help(EXAMPLES)
         .get_matches();
-    
+
     let spread = options.value_of("spread").unwrap().parse().unwrap();
     let freq = options.value_of("freq").unwrap().parse().unwrap();
     // let duration = options.value_of("duration").unwrap().parse().unwrap();
@@ -59,7 +60,7 @@ fn main() {
         seed = rand::random::<usize>() % 32;
     }
     let seed = seed;
-    
+
     let stdin = std::io::stdin();
     let mut handle = stdin.lock();
 
@@ -67,23 +68,24 @@ fn main() {
         for file_name in file_names {
             if file_name == "-" {
                 // Read from stdin
-                cat(&mut handle, freq, spread, seed);
+                cat(&mut handle, freq, spread, seed)?;
             } else {
                 // Read file
                 let file = match File::open(file_name) {
                     Ok(x) => x,
                     Err(e) => {
                         println!("roflcat: {}: {}", file_name, e);
-                        return;
+                        return Ok(());
                     }
                 };
-                let mut buf_reader = BufReader::new(file);
-                cat(&mut buf_reader, freq, spread, seed);
+                let mut buf_reader = io::BufReader::new(file);
+                cat(&mut buf_reader, freq, spread, seed)?;
             }
         }
     } else {
-        cat(&mut handle, freq, spread, seed);
+        cat(&mut handle, freq, spread, seed)?;
     }
+    Ok(())
 }
 
 
@@ -95,15 +97,16 @@ fn rainbow(freq: f32, i: f32) -> (u8, u8, u8) {
     (red, green, blue)
 }
 
-fn cat<B: BufRead>(feed: &mut B, freq: f32, spread: f32, seed: usize) {
-    let stdout = std::io::stdout();
+fn cat<B: io::BufRead>(feed: &mut B, freq: f32, spread: f32, seed: usize) -> io::Result<()>{
+    let stdout = io::stdout();
     let mut handle = stdout.lock();
     for (i, line) in feed.lines().enumerate() {
-        cat_line(&mut handle, &line.unwrap(), freq, spread, seed + i);
+        cat_line(&mut handle, &line.unwrap(), freq, spread, seed + i)?;
     }
+    Ok(())
 }
 
-fn cat_line(stdout: &mut StdoutLock, s: &str, freq: f32, spread: f32, seed: usize) {
+fn cat_line(stdout: &mut io::StdoutLock, s: &str, freq: f32, spread: f32, seed: usize) -> io::Result<()> {
     let strings = s.chars().enumerate()
         .map(|(i, ch)| {
             let i = f32::value_from(seed).unwrap() + f32::value_from(i).unwrap() / spread;
@@ -111,6 +114,6 @@ fn cat_line(stdout: &mut StdoutLock, s: &str, freq: f32, spread: f32, seed: usiz
             ansi_term::Colour::RGB(rgb.0, rgb.1, rgb.2).paint(ch.to_string())
         })
         .collect::<Vec<_>>();
-    stdout.write_all(ANSIStrings(&strings).to_string().as_bytes()).unwrap();
-    writeln!(stdout).unwrap();
+    stdout.write_all(ANSIStrings(&strings).to_string().as_bytes())?;
+    writeln!(stdout)
 }
